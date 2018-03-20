@@ -238,9 +238,9 @@ categorical data points in our document after one run of the program.
 
 Next we define a boolean indicator of significance. We give it a categorical
 decoder.
-This categorical decoder is different because we allow different several
-different strings to indicate each of the two values. This helps to deal with
-data sets with inconsistently labeled categorical data.
+This categorical decoder allows several different strings to indicate each of
+the two values. This helps to deal with data sets with inconsistently labeled
+categorical data.
 
 \begin{code}
 data Significance

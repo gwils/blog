@@ -1,7 +1,7 @@
 ---
-title: Dealing with malformed CSV data with sv
+title: Dealing with multiple CSVs in one file
+date: 2018-03-19
 author: gwilson
-date: 0218-03-19
 ---
 
 == Problem
@@ -20,15 +20,23 @@ Frank Cooper,45
 "basket",      "20",    "$20.0"
 \end{code}
 
-It's not really one CSV document. It's really two logical documents sharing one
-file.
+Although the above is one file, it is not really one CSV document. It's really
+two documents! Each of them has its own header, and a different number of
+columns. Unfortunately, they're together in a single file. This will
+cause our CSV processing tools some difficulty.
 
 == Solution
 
-By exposing its parser for you to build on, sv lets you deal with this kind of
-file with relative ease.
+sv has been designed to separate the parse and decode phases of ingestion.
+Parsing is converting the textual representation into a CSV syntax tree, and
+decoding refers to extracting useful data types from the contets of this tree.
 
-Let's have a look. First some imports:
+Because sv's parser is disentangled from its decoding, you can use the parser
+on its own, with other parsers, and then potentially feed the results into the
+decoding later.
+This lets us deal with this kind of malformed CSV file with ease.
+
+Let's see how to do this. First some imports:
 
 \begin{code}
 module Data.Sv.Example.Concat where
@@ -52,27 +60,29 @@ file = "csv/concat.csv"
 
 Next we set up our parse options. Here we're using some operators from
 [lens](https://hackage.haskell.org/package/lens)
-to set `endOnBlankLine` to `True`, but we could just use field accessors
-instead if we wanted to.
+to set `endOnBlankLine` to `True`, but we could use field accessors
+instead if we preferred that style.
 
 \begin{code}
 opts :: ParseOptions ByteString
 opts = defaultParseOptions & endOnBlankLine .~ True
+
+-- we could just as easily do this without lens,
+-- using field accessors instead
+-- opts = defaultParseOptions { _endOnBlankLine = True }
 \end{code}
 
-This setting means that when sv encounters a blank line in a file, it will
-treat that line as the end of the CSV. So with this setting, we can plug two
-copies of sv's parser together, and they will parse the nasty file above.
+Setting `endOnBlankLine` to true means that when sv encounters a blank line in
+a file, it will treat that line as the end of the CSV. So with this setting,
+we can plug two copies of sv's parser (`separatedValues`) together, and they
+will parse the file above.
 The first parser will parse the first logical document, and end when it hits
 the blank line separating the two. Then the second parser will begin, parsing
 the second document.
 
 \begin{code}
-sv2 :: CharParsing m => ParseOptions s -> m (Sv s, Sv s)
-sv2 o = (,) <$> separatedValues o <*> separatedValues o
-
-parser :: CharParsing m => m (Sv ByteString, Sv ByteString)
-parser = sv2 opts
+pairParser :: CharParsing m => m (Sv ByteString, Sv ByteString)
+pairParser = (,) <$> separatedValues opts <*> separatedValues opts
 \end{code}
 
 Now we'll set up our types and `Decode`s. They're not particularly interesting.
@@ -90,25 +100,25 @@ type Stock = Int
 newtype Cost = Cost Double deriving Show
 data Item = Item Name Stock Cost deriving Show
 
-cost :: TokenParsing m => m Cost
-cost = char '$' *> fmap Cost double
+cost :: Decode' ByteString Cost
+cost = D.withTrifecta (char '$' *> fmap Cost double)
 
 item :: Decode' ByteString Item
-item = Item <$> D.utf8 <*> D.int <*> D.withTrifecta cost
+item = Item <$> D.utf8 <*> D.int <*> cost
 \end{code}
 
-This is the type containing all our decoded data from both logical documents
+This is the type to store all our decoded data from both documents
 
 \begin{code}
 data PeopleAndItems = PeopleAndItems [Person] [Item] deriving Show
 \end{code}
 
-and our main function
+and finally, our main function
 
 \begin{code}
 main :: IO ()
 main = do
-  d <- parseFromFile parser file
+  d <- parseFromFile pairParser file
   case d of
     Nothing -> exitFailure
     Just (s1,s2) -> do
@@ -123,6 +133,5 @@ main = do
 == Conclusion
 
 By strictly separating the `Parse` and `Decode` phases of CSV ingestion, sv
-allows one to extend either of these independently, allowing for handling of
-particularly malformed files.
-
+allows one to extend either of these independently, allowing for more
+flexibility in handling certain classes of malformed files.
