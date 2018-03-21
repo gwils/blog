@@ -27,13 +27,12 @@ cause our CSV processing tools some difficulty.
 
 == Solution
 
-sv has been designed to separate the parse and decode phases of ingestion.
-Parsing is converting the textual representation into a CSV syntax tree, and
-decoding refers to extracting useful data types from the contets of this tree.
+`sv` has been designed to separate the parse and decode phases of ingestion.
+By "parsing" we mean converting the textual representation into a CSV syntax tree, and
+by "decoding" we mean extracting useful data types from the contets of this tree.
 
-Because sv's parser is disentangled from its decoding, you can use the parser
-on its own, with other parsers, and then potentially feed the results into the
-decoding later.
+Because `sv`'s parser is disentangled from its decoding, you can use the parser
+on its own or with other parsers, and then feed the results into the decoding later.
 This lets us deal with this kind of malformed CSV file with ease.
 
 Let's see how to do this. First some imports:
@@ -72,9 +71,9 @@ opts = defaultParseOptions & endOnBlankLine .~ True
 -- opts = defaultParseOptions { _endOnBlankLine = True }
 \end{code}
 
-Setting `endOnBlankLine` to true means that when sv encounters a blank line in
+Setting `endOnBlankLine` to true means that when `sv` encounters a blank line in
 a file, it will treat that line as the end of the CSV. So with this setting,
-we can plug two copies of sv's parser (`separatedValues`) together, and they
+we can plug two copies of `sv`'s parser (`separatedValues`) together, and they
 will parse the file above.
 The first parser will parse the first logical document, and end when it hits
 the blank line separating the two. Then the second parser will begin, parsing
@@ -132,6 +131,6 @@ main = do
 
 == Conclusion
 
-By strictly separating the `Parse` and `Decode` phases of CSV ingestion, sv
+By strictly separating the `Parse` and `Decode` phases of CSV ingestion, `sv`
 allows one to extend either of these independently, allowing for more
 flexibility in handling certain classes of malformed files.

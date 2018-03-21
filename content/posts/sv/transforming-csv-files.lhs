@@ -9,9 +9,11 @@ to decode documents into data types we can use in our program, but we can also
 use them to transform documents in place.
 
 You can do this to make your CSV easier for some other tool to work with.
-Perhaps you have a machine learning pipeline in Python. You won't be able to
-use sv in your program, but you might still find value in using sv as a
-preprocessor to clean some aspects of your data.
+Perhaps you have a machine learning pipeline in Python. In that case, you won't
+be able to use sv in your program directly, since sv is a Haskell library, and
+there is not yet a good way to bridge Python and Haskell code.
+But you might still find value in using sv as a preprocessor to clean some
+aspects of your data, before it even touches your pipeline.
 
 This blog post will go through an example of using sv along with
 [lens](https://hackage.haskell.org/package/lens) to normalise a CSV file that
@@ -76,7 +78,8 @@ Finally, here's the interesting part: `fixQuotes`.
 This function takes an `Sv`, which is sv's CSV syntax tree, and quotes all
 fields in the document with double quotes, without changing any of the fields'
 contents. It does this by composing `Traversal`s which are defined on the
-structure of the `Sv` type.
+structure of the `Sv` type. A `Traversal` is a way of viewing or modifying
+many parts of a structure at once.
 
 \begin{code}
 fixQuotes :: Sv s -> Sv s
@@ -91,7 +94,8 @@ fixQuotes = over headerFields fixQuote . over recordFields fixQuote
 \end{code}
 
 First we go through the header if there is one, fixing all the fields we find
-there. Then we go through the 
+there. Then we go through the actual records themselves fixing all the fields
+we find.
 And that's all there is to it. We've made the quoting in the file consistent.
 
 \begin{code}
@@ -113,5 +117,5 @@ with mismatched quote pairs. For example, fields like `'single double"` or
 `"No closing` will result in parse failure.
 
 Since a field is allowed to contain newlines, commas, and quotes, it's
-difficult to distinguish where a field is supposed to end in the absense
+difficult to distinguish where a field is supposed to end in the absence
 of the proper quote.

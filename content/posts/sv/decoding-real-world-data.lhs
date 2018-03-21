@@ -4,7 +4,7 @@ date: 2018-03-19
 authors: gwilson
 ---
 
-This is an example of using [sv](https://hackage.haskell.org/package/sv) to
+This is an example of using [`sv`](https://hackage.haskell.org/package/sv) to
 parse and decode a real CSV document into a Haskell datatype.
 
 First, we'll get some imports out of the way. We import `Data.Sv` to get many
@@ -28,7 +28,17 @@ import qualified Data.Sv.Decode as D
 Our test file
 [comes from data.gov.au](https://data.qld.gov.au/dataset/conservation-status-of-queensland-wildlife/resource/1c8b4859-31a4-42e7-8e63-b7cf125d4321).
 It lists species found in Queensland, Australia along with their conservation
-statuses.
+statuses. 
+
+Here are the first few lines of the file, to provide some context:
+
+\begin{code}
+"Taxon_Id","Kingdom","Class","Family","Scientific_name","Common_name","Taxon_author","NCA_status","EPBC_status","Significant","Endemicity"
+706,"animals","amphibians","Limnodynastidae","Adelotus brevis","tusked frog","(Günther, 1863)","V",,"Y","QA"
+687,"animals","amphibians","Limnodynastidae","Kyarranus kundagungan","red-and-yellow mountainfrog","(Ingram & Corben, 1975)","V",,"Y","QA"
+688,"animals","amphibians","Limnodynastidae","Kyarranus loveridgei","masked mountainfrog","(Parker, 1940)","C",,,"QA"
+690,"animals","amphibians","Limnodynastidae","Lechriodus fletcheri","black soled frog","(Boulenger, 1890)","C",,,"QA"
+\end{code}
 
 \begin{code}
 file :: FilePath
@@ -44,7 +54,7 @@ which is a non-ISO extension to latin1 8-bit ASCII. In particular, it is
 incompatible with UTF-8.
 
 The parser needs some configuration to parse our file. For example, it
-needs to know which separator character we're using - in our case: comma.
+needs to know which separator character we're using -- in our case: comma.
 It's useful to start from the default options and modify them using lens, but
 you could just as easily modify them with record syntax, or build a config from
 scratch using the types and values defined in `Data.Sv.Parse.Options`.
@@ -55,7 +65,7 @@ opts :: ParseOptions ByteString
 opts = defaultParseOptions
 \end{code}
 
-sv's parser is written using
+`sv`'s parser is written using
 [parsers](https://hackage.haskell.org/package/parsers), which abstracts
 the choice of parsing library. Hence we will now select a parsing library.
 Most users can use the default by calling `parseDecode` rather than `parseDecode'`.
@@ -65,7 +75,7 @@ The default parsing library used is
 because of its very helpful clang-style error messages.
 However Trifecta requires UTF-8 compatible input and, as mentioned above, our
 file is encoded as Windows-1252.
-Hence we're using
+To dodge this issue, we're using
 [Attoparsec](https://hackage.haskell.org/package/attoparsec),
 which has less helpful error messages but can handle this encoding.
 
@@ -78,15 +88,7 @@ parser :: SvParser ByteString
 parser = attoparsecByteString
 \end{code}
 
-This is the type we've made for our rows. It was designed by observing
-the properties of the file. Many of the fields are simply
-textual data, so we've chosen ByteString. We recommend using Text if
-your data is ASCII, UTF-8, or UTF-16. We've made data types for the other
-fields.
-Other fields include the ID which is an int, and several optional fields.
-Because they are optional, we have wrapped them in Maybe.
-These optional fields are categorical data, meaning that each entry is
-from a fixed set of categories or classes.
+This is the type we've made for our rows. 
 
 \begin{code}
 data Species =
@@ -106,7 +108,17 @@ data Species =
   deriving Show
 \end{code}
 
-We newtype the ID so that we don't get it mixed up with any other ints.
+This type was designed by observing
+the properties of the file. Many of the fields are simply
+textual data, so we've chosen ByteString. We recommend using ByteString
+if your data is ASCII or UTF-8. We've also made data types for the other
+fields.
+Other fields include the ID which is an `Int`, and several optional fields.
+Because they are optional, we have wrapped them in Maybe.
+These optional fields are categorical data, meaning that each entry is
+from a fixed set of categories or classes.
+
+We newtype the ID so that we don't get it mixed up with any other `Int`s.
 
 \begin{code}
 newtype ID = ID Int deriving Show
@@ -126,13 +138,13 @@ idDecode = ID <$> D.int
 
 A `Decode` has three type parameters. The first of these is the string
 type to use for errors. Usually one would use `Text` or `Bytestring`. The second
-type parameter is the input string type. We recommend these be the same, as
-many decoding operations will want to use chunks of input strings to build
-error strings.
-In this case, both type paramters are `ByteString`. A type alias `Decode'`
+type parameter is the input string type. We recommend these two string types
+be the same, as many decoding operations will want to use chunks of input
+strings to build error strings.
+In this case, both type parameters are `ByteString`. A type alias `Decode'`
 is provided, which has these two type parameters the same. That type alias
 will be used for the rest of the post.
-The final paramter for a Decode is the type we're decoding into.
+The final parameter for a Decode is the type we're decoding into.
 
 Here is a sum type for the different categories defined by the
 Nature Conservation Act 1992. It is a simple sum type with only nullary
@@ -172,7 +184,7 @@ nca =
   ]
 \end{code}
 
-The following are similar types and decoders, this time for categories defined
+The following are similar types and decoders; this time for categories defined
 in Environment Protection and Biodiversity Conservation Act 1999, and an
 endemicity code. They are defined similarly to NcaCode above and its decoder.
 
@@ -239,7 +251,7 @@ categorical data points in our document after one run of the program.
 Next we define a boolean indicator of significance. We give it a categorical
 decoder.
 This categorical decoder allows several different strings to indicate each of
-the two values. This helps to deal with data sets with inconsistently labeled
+the two values. This helps to deal with data sets with inconsistently labelled
 categorical data.
 
 \begin{code}
@@ -276,7 +288,7 @@ species :: IO (DecodeValidation ByteString [Species])
 species = parseDecodeFromFile' parser speciesDecoder opts file
 \end{code}
 
-Finally, a main method to put it all together.
+Finally, we write a main method to put it all together.
 
 \begin{code}
 main :: IO ()
