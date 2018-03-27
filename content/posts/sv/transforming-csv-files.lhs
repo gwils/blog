@@ -2,6 +2,7 @@
 title: Transforming CSV with sv
 date: 2018-03-20
 author: gwilson
+project: sv
 ---
 
 CSV libraries like [sv](https://hackage.haskell.org/package/sv) are often used

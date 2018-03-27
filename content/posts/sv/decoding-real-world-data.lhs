@@ -2,6 +2,7 @@
 title: Decoding Real-World Data with sv
 date: 2018-03-19
 authors: gwilson
+project: sv
 ---
 
 This is an example of using [`sv`](https://hackage.haskell.org/package/sv) to
